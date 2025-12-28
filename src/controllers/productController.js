@@ -17,13 +17,21 @@ const getAllProducts = asyncHandler(async (req, res) => {
 
   // filtering
   const queryObj = { ...req.query };
-  const excludedFields = ["page", "sort", "limit"];
+  const excludedFields = ["page", "sort", "limit", "search"];
   excludedFields.forEach((el) => delete queryObj[el]);
 
   let queryStr = JSON.stringify(queryObj);
   queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, (match) => `$${match}`);
 
   const filter = JSON.parse(queryStr);
+
+  // searching
+  if (query.search) {
+    filter.$or = [
+      { title: { $regex: query.search, $options: "i" } },
+      { description: { $regex: query.search, $options: "i" } },
+    ];
+  }
 
   const products = await Product.find(filter)
     .sort(sortBy)
