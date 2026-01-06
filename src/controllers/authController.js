@@ -2,10 +2,10 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const AppError = require("../utils/AppError");
 const asyncHandler = require("../middlewares/asyncHandler");
-const generateToken = require("../utils/jwt");
+const { generateToken } = require("../utils/jwt");
 
 const register = asyncHandler(async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, role } = req.body;
 
   const existingUser = await User.findOne({ email });
 
@@ -13,7 +13,7 @@ const register = asyncHandler(async (req, res) => {
     throw new AppError("Email already registerd", 400);
   }
 
-  const user = await User.create({ name, email, password });
+  const user = await User.create({ name, email, password, role });
 
   user.password = undefined;
 
