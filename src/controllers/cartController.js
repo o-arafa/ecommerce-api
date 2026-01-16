@@ -55,8 +55,6 @@ const addToCart = asyncHandler(async (req, res) => {
     });
   }
 
-  cart.totalPrice += product.price * quantity;
-
   await cart.save();
 
   res.status(200).json({
@@ -65,4 +63,93 @@ const addToCart = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { getMyCart, addToCart };
+const updateCartItem = asyncHandler(async (req, res, next) => {
+  const { productId } = req.params;
+  const { quantity } = req.body;
+
+  const cart = await Cart.findOne({ user: req.user.id });
+  if (!cart) {
+    return next(new AppError("Cart not found", 404));
+  }
+
+  const itemIndex = cart.items.findIndex(
+    (item) => item.product.toString() === productId
+  );
+
+  if (itemIndex === -1) {
+    return next(new AppError("Item not found in cart", 404));
+  }
+
+  const product = await Product.findById(productId);
+  if (!product) {
+    return next(new AppError("Product not found", 404));
+  }
+
+  if (product.quantity < quantity) {
+    return next(new AppError("Not enough stock available", 400));
+  }
+
+  cart.items[itemIndex].quantity = quantity;
+  await cart.save();
+
+  const updatedCart = await Cart.findById(cart._id).populate(
+    "items.product",
+    "title description"
+  );
+
+  res.status(200).json({
+    status: "success",
+    message: "Cart item updated",
+    data: { cart: updatedCart },
+  });
+});
+
+const removeFromCart = asyncHandler(async (req, res, next) => {
+  const { productId } = req.params;
+
+  const cart = await Cart.findOne({ user: req.user.id });
+  if (!cart) {
+    return next(new AppError("Cart not found", 404));
+  }
+
+  cart.items = cart.items.filter(
+    (item) => item.product.toString() !== productId
+  );
+
+  await cart.save();
+
+  const updatedCart = await Cart.findById(cart._id).populate(
+    "items.product",
+    "title description"
+  );
+
+  res.status(200).json({
+    status: "success",
+    message: "Item removed from cart",
+    data: { cart: updatedCart },
+  });
+});
+
+const clearCart = asyncHandler(async (req, res, next) => {
+  const cart = await Cart.findOne({ user: req.user.id });
+  if (!cart) {
+    return next(new AppError("Cart not found", 404));
+  }
+
+  cart.items = [];
+  await cart.save();
+
+  res.status(200).json({
+    status: "success",
+    message: "Cart cleared",
+    data: { cart },
+  });
+});
+
+module.exports = {
+  getMyCart,
+  addToCart,
+  updateCartItem,
+  removeFromCart,
+  clearCart,
+};
