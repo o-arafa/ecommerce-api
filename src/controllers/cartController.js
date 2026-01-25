@@ -69,7 +69,7 @@ const updateCartItem = asyncHandler(async (req, res, next) => {
 
   const cart = await Cart.findOne({ user: req.user.id });
   if (!cart) {
-    return next(new AppError("Cart not found", 404));
+    throw new AppError("Cart not found", 404);
   }
 
   const itemIndex = cart.items.findIndex(
@@ -77,16 +77,16 @@ const updateCartItem = asyncHandler(async (req, res, next) => {
   );
 
   if (itemIndex === -1) {
-    return next(new AppError("Item not found in cart", 404));
+    throw new AppError("Item not found", 404);
   }
 
   const product = await Product.findById(productId);
   if (!product) {
-    return next(new AppError("Product not found", 404));
+    throw new AppError("Product not found", 404);
   }
 
   if (product.quantity < quantity) {
-    return next(new AppError("Not enough stock available", 400));
+    throw new AppError("Not enough stock available", 400);
   }
 
   cart.items[itemIndex].quantity = quantity;
@@ -109,7 +109,7 @@ const removeFromCart = asyncHandler(async (req, res, next) => {
 
   const cart = await Cart.findOne({ user: req.user.id });
   if (!cart) {
-    return next(new AppError("Cart not found", 404));
+    throw new AppError("Cart not found", 404);
   }
 
   cart.items = cart.items.filter(
@@ -133,7 +133,7 @@ const removeFromCart = asyncHandler(async (req, res, next) => {
 const clearCart = asyncHandler(async (req, res, next) => {
   const cart = await Cart.findOne({ user: req.user.id });
   if (!cart) {
-    return next(new AppError("Cart not found", 404));
+    throw new AppError("Cart not found", 404);
   }
 
   cart.items = [];
