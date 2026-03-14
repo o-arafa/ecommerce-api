@@ -66,7 +66,7 @@ const updateProduct = asyncHandler(async (req, res) => {
     {
       new: true,
       runValidators: true,
-    }
+    },
   );
 
   if (!product) {

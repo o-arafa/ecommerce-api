@@ -11,7 +11,7 @@ router
 router
   .route("/:productId")
   .get(productController.getProduct)
-  .put(productController.updateProduct)
+  .put(protect, authorize("admin"), productController.updateProduct)
   .delete(protect, authorize("admin"), productController.deleteProduct);
 
 module.exports = router;
