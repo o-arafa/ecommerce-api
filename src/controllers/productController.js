@@ -1,4 +1,5 @@
 const Product = require("../models/Product");
+const Category = require("../models/Category");
 const AppError = require("../utils/AppError");
 const asyncHandler = require("../middlewares/asyncHandler");
 
@@ -34,6 +35,7 @@ const getAllProducts = asyncHandler(async (req, res) => {
   }
 
   const products = await Product.find(filter)
+    .populate("category", "title")
     .sort(sortBy)
     .skip(skip)
     .limit(limit);
@@ -54,12 +56,25 @@ const getProduct = asyncHandler(async (req, res) => {
 });
 
 const createProduct = asyncHandler(async (req, res) => {
-  const newProduct = new Product(req.body);
-  await newProduct.save();
+  const { category } = req.body;
+
+  const existingCategory = await Category.findById(category);
+  if (!existingCategory) {
+    throw new AppError("The selected category does not exist", 404);
+  }
+
+  const newProduct = await Product.create(req.body);
+
   res.status(201).json(newProduct);
 });
 
 const updateProduct = asyncHandler(async (req, res) => {
+  const { category } = req.body;
+
+  const existingCategory = await Category.findById(category);
+  if (!existingCategory) {
+    throw new AppError("The selected category does not exist", 404);
+  }
   const product = await Product.findByIdAndUpdate(
     req.params.productId,
     req.body,
