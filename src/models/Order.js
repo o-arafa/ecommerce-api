@@ -14,6 +14,10 @@ const orderSchema = new mongoose.Schema(
           ref: "Product",
           required: true,
         },
+        title: {
+          type: String,
+          required: true,
+        },
         quantity: {
           type: Number,
           required: true,
@@ -25,6 +29,27 @@ const orderSchema = new mongoose.Schema(
         },
       },
     ],
+    shippingInformation: {
+      phone: {
+        type: String,
+        required: [true, "Phone is required"],
+      },
+      address: {
+        type: String,
+        required: [true, "Address is required"],
+      },
+      city: {
+        type: String,
+        required: [true, "City is required"],
+      },
+      postalCode: {
+        type: String,
+      },
+    },
+    shippingPrice: {
+      type: Number,
+      default: 0,
+    },
     totalPrice: {
       type: Number,
       default: 0,

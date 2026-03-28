@@ -6,7 +6,7 @@ const asyncHandler = require("../middlewares/asyncHandler");
 const getMyCart = asyncHandler(async (req, res) => {
   let cart = await Cart.findOne({ user: req.user._id }).populate(
     "items.product",
-    "title description"
+    "title description",
   );
 
   if (!cart) {
@@ -42,8 +42,18 @@ const addToCart = asyncHandler(async (req, res) => {
   }
 
   const existingItem = cart.items.find(
-    (item) => item.product.toString() === productId
+    (item) => item.product.toString() === productId,
   );
+
+  const currentInCart = existingItem ? existingItem.quantity : 0;
+  const totalRequested = currentInCart + quantity;
+
+  if (totalRequested > product.quantity) {
+    throw new AppError(
+      `The available quantity in the stock is ${product.quantity} and you have already ${currentInCart} in the chart`,
+      400,
+    );
+  }
 
   if (existingItem) {
     existingItem.quantity += quantity;
@@ -51,6 +61,7 @@ const addToCart = asyncHandler(async (req, res) => {
     cart.items.push({
       product: product._id,
       quantity,
+      title: product.title,
       price: product.price,
     });
   }
@@ -73,7 +84,7 @@ const updateCartItem = asyncHandler(async (req, res, next) => {
   }
 
   const itemIndex = cart.items.findIndex(
-    (item) => item.product.toString() === productId
+    (item) => item.product.toString() === productId,
   );
 
   if (itemIndex === -1) {
@@ -94,7 +105,7 @@ const updateCartItem = asyncHandler(async (req, res, next) => {
 
   const updatedCart = await Cart.findById(cart._id).populate(
     "items.product",
-    "title description"
+    "title description",
   );
 
   res.status(200).json({
@@ -113,14 +124,14 @@ const removeFromCart = asyncHandler(async (req, res, next) => {
   }
 
   cart.items = cart.items.filter(
-    (item) => item.product.toString() !== productId
+    (item) => item.product.toString() !== productId,
   );
 
   await cart.save();
 
   const updatedCart = await Cart.findById(cart._id).populate(
     "items.product",
-    "title description"
+    "title description",
   );
 
   res.status(200).json({

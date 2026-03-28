@@ -15,6 +15,18 @@ const userSchema = new mongoose.Schema(
       match: [/^\S+@\S+\.\S+$/, "Please use a valid email"],
       lowercase: true,
     },
+    phone: {
+      type: String,
+    },
+    address: {
+      type: String,
+    },
+    city: {
+      type: String,
+    },
+    postalCode: {
+      type: String,
+    },
     password: {
       type: String,
       required: [true, "Password is required"],
@@ -29,7 +41,7 @@ const userSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 userSchema.pre("save", async function () {

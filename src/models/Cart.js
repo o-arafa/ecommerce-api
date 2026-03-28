@@ -14,6 +14,10 @@ const cartSchema = new mongoose.Schema(
           type: mongoose.Schema.Types.ObjectId,
           ref: "Product",
         },
+        title: {
+          type: String,
+          required: true,
+        },
         quantity: {
           type: Number,
           required: true,
@@ -33,13 +37,13 @@ const cartSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 cartSchema.pre("save", function () {
   this.totalPrice = this.items.reduce(
     (total, item) => total + item.price * item.quantity,
-    0
+    0,
   );
 });
 

@@ -1,15 +1,12 @@
 const Order = require("../models/Order");
 const Cart = require("../models/Cart");
 const Product = require("../models/Product");
+const User = require("../models/User");
 const AppError = require("../utils/AppError");
 const asyncHandler = require("../middlewares/asyncHandler");
 
 const getMyOrders = asyncHandler(async (req, res) => {
   const orders = await Order.find({ user: req.user._id });
-
-  // if (!orders) {
-  //   throw new AppError("Order not found", 400);
-  // }
 
   res.status(200).json({
     success: true,
@@ -32,6 +29,28 @@ const getOrderById = asyncHandler(async (req, res) => {
 });
 
 const createOrder = asyncHandler(async (req, res) => {
+  let { shippingInformation, shippingPrice = 0 } = req.body || {};
+
+  if (!shippingInformation) {
+    const user = await User.findById(req.user._id);
+
+    if (user.city && user.address && user.phone) {
+      shippingInformation = {
+        address: user.address,
+        city: user.city,
+        postalCode: user.postalCode || "None",
+        phone: user.phone,
+      };
+    }
+  }
+
+  if (!shippingInformation) {
+    throw new AppError(
+      "Shipping information is missing. Please update your profile or provide it.",
+      400,
+    );
+  }
+
   const cart = await Cart.findOne({ user: req.user._id });
 
   if (!cart || cart.items.length === 0) {
@@ -53,20 +72,32 @@ const createOrder = asyncHandler(async (req, res) => {
     }
   }
 
+  const finalTotalPrice = cart.totalPrice + Number(shippingPrice);
+
   const order = await Order.create({
     user: req.user._id,
     items: cart.items,
-    totalPrice: cart.totalPrice,
+    shippingInformation,
+    shippingPrice,
+    totalPrice: finalTotalPrice,
   });
 
-  for (const item of cart.items) {
-    await Product.findByIdAndUpdate(item.product, {
-      $inc: { quantity: -item.quantity },
-    });
-  }
+  if (order) {
+    const bulkOption = cart.items.map((item) => ({
+      updateOne: {
+        filter: { _id: item.product },
+        update: {
+          $inc: {
+            quantity: -Number(item.quantity),
+            sold: Number(item.quantity),
+          },
+        },
+      },
+    }));
+    await Product.bulkWrite(bulkOption, {});
 
-  cart.items = [];
-  await cart.save();
+    await Cart.findByIdAndDelete(cart._id);
+  }
 
   res.status(201).json({
     success: true,

@@ -24,6 +24,10 @@ const productSchema = new mongoose.Schema(
       required: [true, "Product quantity is required"],
       min: [1, "Quantity must be greater than zero"],
     },
+    sold: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,
