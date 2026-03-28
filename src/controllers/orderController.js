@@ -120,11 +120,19 @@ const cancelOrder = asyncHandler(async (req, res) => {
     throw new AppError("Cannot cancel order", 400);
   }
 
-  for (const item of order.items) {
-    await Product.findByIdAndUpdate(item.product, {
-      $inc: { quantity: item.quantity },
-    });
-  }
+  const bulkOption = order.items.map((item) => ({
+    updateOne: {
+      filter: { _id: item.product },
+      update: {
+        $inc: {
+          quantity: Number(item.quantity),
+          sold: -Number(item.quantity),
+        },
+      },
+    },
+  }));
+
+  await Product.bulkWrite(bulkOption, {});
 
   order.status = "cancelled";
   await order.save();
