@@ -12,19 +12,9 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, "Email is required"],
       unique: true,
-      match: [/^\S+@\S+\.\S+$/, "Please use a valid email"],
       lowercase: true,
     },
     phone: {
-      type: String,
-    },
-    address: {
-      type: String,
-    },
-    city: {
-      type: String,
-    },
-    postalCode: {
       type: String,
     },
     password: {
@@ -32,6 +22,11 @@ const userSchema = new mongoose.Schema(
       required: [true, "Password is required"],
       minlength: [8, "Password must be at least 8 characters"],
       select: false,
+    },
+    // for soft delete
+    isActive: {
+      type: Boolean,
+      default: true,
     },
     role: {
       type: String,
@@ -44,9 +39,14 @@ const userSchema = new mongoose.Schema(
   },
 );
 
-userSchema.pre("save", async function () {
-  if (!this.isModified("password")) return;
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next();
   this.password = await bcrypt.hash(this.password, 12);
+  next();
 });
+
+userSchema.methods.comparePassword = async function(candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
+};
 
 module.exports = mongoose.model("User", userSchema);
