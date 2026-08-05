@@ -2,11 +2,11 @@ const Category = require("../models/Category");
 const asyncHandler = require("../middlewares/asyncHandler");
 const AppError = require("../utils/AppError");
 
-const getAllCategorys = asyncHandler(async (req, res) => {
-  const categorys = await Category.find();
+const getAllCategories = asyncHandler(async (req, res) => {
+  const categories = await Category.find();
   res.status(200).json({
     success: true,
-    data: categorys,
+    data: categories,
   });
 });
 
@@ -25,9 +25,6 @@ const getCategory = asyncHandler(async (req, res) => {
 
 const createCategory = asyncHandler(async (req, res) => {
   const { title, description } = req.body;
-  if (!title || !description) {
-    throw new AppError("name and description are required", 400);
-  }
 
   const newCategory = await Category.create({
     title,
@@ -91,7 +88,7 @@ const deleteCategory = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
-  getAllCategorys,
+  getAllCategories,
   getCategory,
   createCategory,
   updateCategory,

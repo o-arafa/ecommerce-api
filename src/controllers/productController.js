@@ -34,6 +34,8 @@ const getAllProducts = asyncHandler(async (req, res) => {
     ];
   }
 
+  const total = await Product.countDocuments(filter);
+
   const products = await Product.find(filter)
     .populate("category", "title")
     .sort(sortBy)
@@ -42,12 +44,18 @@ const getAllProducts = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
+    results: products.length,
+    total,
+    totalPages: Math.ceil(total / limit),
+    currentPage: page,
     data: products,
   });
 });
 
 const getProduct = asyncHandler(async (req, res) => {
-  const product = await Product.findById(req.params.productId);
+  const product = await Product.findById(req.params.productId)
+    .populate("category", "title");
+
   if (!product) {
     throw new AppError("Product not found", 404);
   }
@@ -71,9 +79,11 @@ const createProduct = asyncHandler(async (req, res) => {
 const updateProduct = asyncHandler(async (req, res) => {
   const { category } = req.body;
 
-  const existingCategory = await Category.findById(category);
-  if (!existingCategory) {
-    throw new AppError("The selected category does not exist", 404);
+  if (category) {
+    const existingCategory = await Category.findById(category);
+    if (!existingCategory) {
+      throw new AppError("The selected category does not exist", 404);
+    }
   }
   const product = await Product.findByIdAndUpdate(
     req.params.productId,
