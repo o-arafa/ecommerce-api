@@ -2,6 +2,7 @@ const Product = require("../models/Product");
 const Category = require("../models/Category");
 const AppError = require("../utils/AppError");
 const asyncHandler = require("../middlewares/asyncHandler");
+const mongoose = require("mongoose"); 
 
 const getAllProducts = asyncHandler(async (req, res) => {
   const query = req.query;
@@ -52,15 +53,23 @@ const getAllProducts = asyncHandler(async (req, res) => {
   });
 });
 
-const getProduct = asyncHandler(async (req, res) => {
-  const product = await Product.findById(req.params.productId)
-    .populate("category", "title");
-
+const getProduct = asyncHandler(async (req, res, next) => {
+  const { productId } = req.params;
+  
+  const isObjectId = mongoose.Types.ObjectId.isValid(productId);
+  
+  const product = isObjectId
+    ? await Product.findById(productId).populate('category', 'title')
+    : await Product.findOne({ slug: productId }).populate('category', 'title');
+  
   if (!product) {
-    throw new AppError("Product not found", 404);
+    throw new AppError('Product not found', 404);
   }
-
-  res.status(200).json(product);
+  
+  res.status(200).json({
+    status: 'success',
+    data: { product },
+  });
 });
 
 const createProduct = asyncHandler(async (req, res) => {
@@ -85,20 +94,19 @@ const updateProduct = asyncHandler(async (req, res) => {
       throw new AppError("The selected category does not exist", 404);
     }
   }
-  const product = await Product.findByIdAndUpdate(
-    req.params.productId,
-    req.body,
-    {
-      new: true,
-      runValidators: true,
-    },
-  );
-
+  const product = await Product.findById(req.params.productId);
   if (!product) {
-    throw new AppError("Product not found", 404);
+    throw new AppError('Product not found', 404);
   }
-
-  res.status(200).json(product);
+  
+  Object.assign(product, req.body);
+  
+  await product.save();
+  
+  res.status(200).json({
+    status: 'success',
+    data: { product },
+  });
 });
 
 const deleteProduct = asyncHandler(async (req, res) => {

@@ -1,6 +1,7 @@
 const Category = require("../models/Category");
 const asyncHandler = require("../middlewares/asyncHandler");
 const AppError = require("../utils/AppError");
+const mongoose = require("mongoose"); 
 
 const getAllCategories = asyncHandler(async (req, res) => {
   const categories = await Category.find();
@@ -11,7 +12,13 @@ const getAllCategories = asyncHandler(async (req, res) => {
 });
 
 const getCategory = asyncHandler(async (req, res) => {
-  const category = await Category.findById(req.params.categoryId);
+  const { categoryId } = req.params;
+
+  const isObjectId = mongoose.Types.ObjectId.isValid(categoryId);
+
+  const category = isObjectId
+    ? await Category.findById(categoryId)
+    : await Category.findOne({ slug: categoryId });
 
   if (!category) {
     throw new AppError("Category not found", 404);
