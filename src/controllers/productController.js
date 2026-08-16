@@ -73,15 +73,22 @@ const getProduct = asyncHandler(async (req, res, next) => {
 });
 
 const createProduct = asyncHandler(async (req, res) => {
-  const { category } = req.body;
+  const { category, quantity, ...rest } = req.body;
 
   const existingCategory = await Category.findById(category);
   if (!existingCategory) {
     throw new AppError("The selected category does not exist", 404);
   }
 
-  const newProduct = await Product.create(req.body);
-
+  const newProduct = await Product.create({
+    ...rest,
+    category,
+    inventory: {
+      quantity: quantity || 0,
+      reserved: 0,
+    },
+  });
+  
   res.status(201).json(newProduct);
 });
 

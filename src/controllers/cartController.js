@@ -6,7 +6,7 @@ const asyncHandler = require("../middlewares/asyncHandler");
 const getMyCart = asyncHandler(async (req, res) => {
   let cart = await Cart.findOne({ user: req.user._id }).populate(
     "items.product",
-    "title description",
+    "title description"
   );
 
   if (!cart) {
@@ -42,18 +42,23 @@ const addToCart = asyncHandler(async (req, res) => {
   }
 
   const existingItem = cart.items.find(
-    (item) => item.product.toString() === productId,
+    (item) => item.product.toString() === productId
   );
 
   const currentInCart = existingItem ? existingItem.quantity : 0;
   const totalRequested = currentInCart + quantity;
 
-  if (totalRequested > product.quantity) {
+  const available = product.available;
+
+  if (totalRequested > available) {
     throw new AppError(
-      `The available quantity in the stock is ${product.quantity} and you have already ${currentInCart} in the chart`,
-      400,
+      `Only ${available} items available. You have ${currentInCart} in cart.`,
+      400
     );
   }
+
+  product.inventory.reserved += quantity;
+  await product.save();
 
   if (existingItem) {
     existingItem.quantity += quantity;
@@ -84,7 +89,7 @@ const updateCartItem = asyncHandler(async (req, res, next) => {
   }
 
   const itemIndex = cart.items.findIndex(
-    (item) => item.product.toString() === productId,
+    (item) => item.product.toString() === productId
   );
 
   if (itemIndex === -1) {
@@ -96,22 +101,29 @@ const updateCartItem = asyncHandler(async (req, res, next) => {
     throw new AppError("Product not found", 404);
   }
 
-  if (product.quantity < quantity) {
-    throw new AppError("Not enough stock available", 400);
+  const oldQuantity = cart.items[itemIndex].quantity;
+  const quantityDiff = quantity - oldQuantity;  // +2 أو -1
+
+  const available = product.inventory.quantity - product.inventory.reserved;
+
+  if (quantityDiff > 0 && quantityDiff > available) {
+    throw new AppError(`Only ${available} more items available`, 400);
   }
+
+  product.inventory.reserved += quantityDiff;
+  await product.save();
 
   cart.items[itemIndex].quantity = quantity;
   await cart.save();
 
   const updatedCart = await Cart.findById(cart._id).populate(
     "items.product",
-    "title description",
+    "title description"
   );
 
   res.status(200).json({
-    status: "success",
-    message: "Cart item updated",
-    data: { cart: updatedCart },
+    success: true,
+    data: updatedCart,
   });
 });
 
@@ -123,15 +135,26 @@ const removeFromCart = asyncHandler(async (req, res, next) => {
     throw new AppError("Cart not found", 404);
   }
 
-  cart.items = cart.items.filter(
-    (item) => item.product.toString() !== productId,
+  const removedItem = cart.items.find(
+    (item) => item.product.toString() === productId
   );
 
-  await cart.save();
+  if (!removedItem) {
+    throw new AppError("Item not found", 404);
+  }
 
+  const product = await Product.findById(productId);
+  product.inventory.reserved -= removedItem.quantity;
+  await product.save();
+
+  cart.items = cart.items.filter(
+    (item) => item.product.toString() !== productId
+  );
+
+  await cart.save();  
   const updatedCart = await Cart.findById(cart._id).populate(
-    "items.product",
-    "title description",
+  "items.product",
+  "title description",
   );
 
   res.status(200).json({
@@ -143,12 +166,20 @@ const removeFromCart = asyncHandler(async (req, res, next) => {
 
 const clearCart = asyncHandler(async (req, res, next) => {
   const cart = await Cart.findOne({ user: req.user.id });
-  if (!cart) {
-    throw new AppError("Cart not found", 404);
-  }
-
-  cart.items = [];
-  await cart.save();
+    if (!cart) {
+      throw new AppError("Cart not found", 404);
+    }
+  
+    for (const item of cart.items) {
+      const product = await Product.findById(item.product);
+      if (product) {
+        product.inventory.reserved -= item.quantity;
+        await product.save();
+      }
+    }
+  
+    cart.items = [];
+    await cart.save();
 
   res.status(200).json({
     status: "success",

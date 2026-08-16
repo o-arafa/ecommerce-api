@@ -1,17 +1,17 @@
 const express = require("express");
-const router = express.Router();
-
 const cartController = require("../controllers/cartController");
 const { protect } = require("../middlewares/auth");
+const validate = require('../middlewares/validate');
+const { addToCartSchema, updateCartItemSchema } = require('../validators/cart.schema');
 
-router
-  .route("/")
-  .get(protect, cartController.getMyCart)
-  .post(protect, cartController.addToCart)
-  .delete(protect, cartController.clearCart);
+const router = express.Router();
+
+router.get('/', protect, cartController.getMyCart);
+router.post('/add', protect, validate(addToCartSchema), cartController.addToCart);
+router.delete('/clear', protect, cartController.clearCart);
 router
   .route("/:productId")
-  .put(protect, cartController.updateCartItem)
+  .put(protect, validate(updateCartItemSchema), cartController.updateCartItem)
   .delete(protect, cartController.removeFromCart);
 
 module.exports = router;

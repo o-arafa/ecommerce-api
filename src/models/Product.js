@@ -24,11 +24,18 @@ const productSchema = new mongoose.Schema(
       required: [true, "Product price is required"],
       min: [0, "Price cannot be negative"],
     },
-    quantity: {
-      type: Number,
-      required: [true, "Product quantity is required"],
-      min: [0, "Quantity cannot be negative"],
-      default: 0,
+    inventory: {
+      quantity: {
+        type: Number,
+        required: [true, "Product quantity is required"],
+        min: [0, "Quantity cannot be negative"],
+        default: 0,
+      },
+      reserved: {
+        type: Number,
+        default: 0,
+        min: [0, 'Reserved cannot be negative'],
+      },
     },
     sold: {
       type: Number,
@@ -39,6 +46,10 @@ const productSchema = new mongoose.Schema(
     timestamps: true,
   },
 );
+
+productSchema.virtual('available').get(function() {
+  return this.inventory.quantity - this.inventory.reserved;
+}); 
 
 productSchema.pre('save',async function() {
   if (this.isModified("title")) {
