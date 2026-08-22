@@ -7,6 +7,10 @@ const orderSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    orderNumber: {
+      type: String,
+      unique: true,
+    },
     items: [
       {
         product: {
@@ -27,6 +31,10 @@ const orderSchema = new mongoose.Schema(
           type: Number,
           required: true,
         },
+        total: {
+          type: Number,
+          required: true,
+        },
       },
     ],
     shippingInformation: {
@@ -41,9 +49,6 @@ const orderSchema = new mongoose.Schema(
       city: {
         type: String,
         required: [true, "City is required"],
-      },
-      postalCode: {
-        type: String,
       },
     },
     shippingPrice: {
@@ -73,5 +78,13 @@ const orderSchema = new mongoose.Schema(
     timestamps: true,
   },
 );
+
+orderSchema.pre('save', function() {
+  if (this.isNew) {
+    const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const random = Math.floor(1000 + Math.random() * 9000);
+    this.orderNumber = `ORD-${date}-${random}`;
+  }
+});
 
 module.exports = mongoose.model("Order", orderSchema);
