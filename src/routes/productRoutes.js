@@ -8,7 +8,7 @@ const productSchema = require('../validators/product.schema')
 router
   .route("/")
   .get(productController.getAllProducts)
-  .post(validate(productSchema), productController.createProduct);
+  .post(protect, authorize("admin"), validate(productSchema), productController.createProduct);
 
 router
   .route("/:productId")

@@ -12,5 +12,11 @@ const createOrderSchema = z.object({
   shippingPrice: z.number().min(0).default(0),
 });
 
+const updateStatusSchema = z.object({
+  status: z.enum(['pending', 'processing', 'shipped', 'delivered', 'cancelled']),
+});
 
-module.exports = createOrderSchema;
+module.exports = {
+  createOrderSchema,
+  updateStatusSchema,
+};
