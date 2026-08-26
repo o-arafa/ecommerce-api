@@ -4,9 +4,9 @@ const paymentController = require("../controllers/paymentController");
 const { protect } = require("../middlewares/auth");
 
 router.post(
-  "/create-payment-intent",
+  "/checkout",
   protect,
-  paymentController.createPaymentIntent,
+  paymentController.checkout,
 );
 
 module.exports = router;

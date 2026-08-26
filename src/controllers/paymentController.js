@@ -1,15 +1,22 @@
 const stripe = require("../config/stripe");
 const Order = require("../models/Order");
-const Product = require("../models/Product");
 const asyncHandler = require("../middlewares/asyncHandler");
 const AppError = require("../utils/AppError");
 
-const createPaymentIntent = asyncHandler(async (req, res) => {
+const checkout = asyncHandler(async (req, res) => {
   const { orderId } = req.body;
 
   const order = await Order.findById(orderId);
   if (!order) {
     throw new AppError("Order not found", 404);
+  }
+
+  if (order.user.toString() !== req.user._id.toString()) {
+    throw new AppError("Not authorized", 403);
+  }
+
+  if (order.status === "cancelled") {
+    throw new AppError("Order cancelled", 400);
   }
 
   if (order.paymentStatus === "paid") {
@@ -45,7 +52,7 @@ const stripeWebhook = async (req, res) => {
     event = stripe.webhooks.constructEvent(
       req.body,
       sig,
-      process.env.STRIPE_WEBHOOK_SECRET,
+      process.env.STRIPE_WEBHOOK_SECRET
     );
   } catch (err) {
     console.error("Webhook signature verification failed:", err.message);
@@ -58,31 +65,37 @@ const stripeWebhook = async (req, res) => {
 
       const order = await Order.findOne({
         paymentIntentId: paymentIntent.id,
-      }).populate("items.product");
+      });
 
-      if (!order) {
-        return res.json({ received: true });
+      if (order) {
+        order.paymentStatus = "paid";
+        order.status = "processing";
+        await order.save();
+        console.log(`Order ${order._id} updated to paid`);
       }
+    } else if (event.type === "payment_intent.payment_failed") {
+      const paymentIntent = event.data.object;
 
-      order.paymentStatus = "paid";
-      order.status = "processing";
-      await order.save();
+      const order = await Order.findOne({
+        paymentIntentId: paymentIntent.id,
+      });
 
-      for (const item of order.items) {
-        await Product.findByIdAndUpdate(item.product._id, {
-          $inc: { quantity: -item.quantity },
-        });
+      if (order) {
+        order.paymentStatus = "failed";
+        await order.save();
+        console.log(`Order ${order._id} failed`);
       }
     }
 
-    res.json({ received: true });
+    return res.status(200).json({ received: true });
+
   } catch (error) {
     console.error("Error processing webhook:", error.message);
-    res.status(500).json({ error: "Webhook processing failed" });
+    return res.status(500).json({ received: false });
   }
 };
 
 module.exports = {
-  createPaymentIntent,
+  checkout,
   stripeWebhook,
 };
