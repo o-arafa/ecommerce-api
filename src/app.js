@@ -1,7 +1,7 @@
 const express = require("express");
-const productRouters = require("./routes/productRoutes");
-const categoryRouters = require("./routes/categoryRoutes");
-const authRouters = require("./routes/authRoutes");
+const productRoutes = require("./routes/product.routes");
+const categoryRoutes = require("./routes/category.routes");
+const authRoutes = require("./routes/auth.routes");
 const cartRoutes = require("./routes/cartRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
@@ -21,9 +21,9 @@ app.get("/", (req, res) => {
   res.json("API is working");
 });
 
-app.use("/api/products", productRouters);
-app.use("/api/categories", categoryRouters);
-app.use("/api/auth", authRouters);
+app.use("/api/products", productRoutes);
+app.use("/api/categories", categoryRoutes);
+app.use("/api/auth", authRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/order", orderRoutes);
 app.use("/api/payments", paymentRoutes);

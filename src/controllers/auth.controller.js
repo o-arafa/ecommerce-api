@@ -1,40 +1,28 @@
-const User = require("../models/User");
-const bcrypt = require("bcryptjs");
-const AppError = require("../utils/AppError");
 const asyncHandler = require("../middlewares/asyncHandler");
-const { generateToken } = require("../utils/jwt");
+const authService = require("../services/auth.service");
 
 const register = asyncHandler(async (req, res) => {
-  const { name, email, password} = req.body;
+  const { name, email, password } = req.body;
 
-  const existingUser = await User.findOne({ email });
+  const { user, token } = await authService.register({ name, email, password });
 
-  if (existingUser) {
-    throw new AppError("Email already registerd", 409);
-  }
-
-  const user = await User.create({ name, email, password});
-
-  user.password = undefined;
-
-  const token = generateToken(user._id);
-
-  res.status(201).json({ status: "success", data: { user }, token });
+  res.status(201).json({
+    status: "success",
+    data: { user },
+    token,
+  });
 });
 
 const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
-  const user = await User.findOne({ email: req.body.email }).select(
-    "+password"
-  );
+  const { user, token } = await authService.login({ email, password });
 
-  if (!user || !(await user.comparePassword(req.body.password))) {
-    throw new AppError("incorrect email or password", 401);
-  }
-  const token = generateToken(user._id);
-  user.password = undefined;
-  res.status(200).json({ status: "success", data: user, token });
+  res.status(200).json({
+    status: "success",
+    data: { user },
+    token,
+  });
 });
 
 module.exports = {

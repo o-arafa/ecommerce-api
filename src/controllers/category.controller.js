@@ -1,10 +1,9 @@
-const Category = require("../models/Category");
 const asyncHandler = require("../middlewares/asyncHandler");
-const AppError = require("../utils/AppError");
-const mongoose = require("mongoose"); 
+const categoryService = require("../services/category.service");
 
 const getAllCategories = asyncHandler(async (req, res) => {
-  const categories = await Category.find();
+  const categories = await categoryService.getAllCategories();
+
   res.status(200).json({
     success: true,
     data: categories,
@@ -12,17 +11,7 @@ const getAllCategories = asyncHandler(async (req, res) => {
 });
 
 const getCategory = asyncHandler(async (req, res) => {
-  const { categoryId } = req.params;
-
-  const isObjectId = mongoose.Types.ObjectId.isValid(categoryId);
-
-  const category = isObjectId
-    ? await Category.findById(categoryId)
-    : await Category.findOne({ slug: categoryId });
-
-  if (!category) {
-    throw new AppError("Category not found", 404);
-  }
+  const category = await categoryService.getCategory(req.params.categoryId);
 
   res.status(200).json({
     success: true,
@@ -33,7 +22,7 @@ const getCategory = asyncHandler(async (req, res) => {
 const createCategory = asyncHandler(async (req, res) => {
   const { title, description } = req.body;
 
-  const newCategory = await Category.create({
+  const category = await categoryService.createCategory({
     title,
     description,
   });
@@ -41,27 +30,15 @@ const createCategory = asyncHandler(async (req, res) => {
   res.status(201).json({
     success: true,
     message: "Category created successfully",
-    data: newCategory,
+    data: category,
   });
 });
 
 const updateCategory = asyncHandler(async (req, res) => {
-  if (!req.body || Object.keys(req.body).length === 0) {
-    throw new AppError("Please provide at least one field to update", 400);
-  }
-
-  const category = await Category.findByIdAndUpdate(
+  const category = await categoryService.updateCategory(
     req.params.categoryId,
     req.body,
-    {
-      new: true,
-      runValidators: true,
-    },
   );
-
-  if (!category) {
-    throw new AppError("Category not found", 404);
-  }
 
   res.status(200).json({
     success: true,
@@ -71,26 +48,11 @@ const updateCategory = asyncHandler(async (req, res) => {
 });
 
 const deleteCategory = asyncHandler(async (req, res) => {
-  const { categoryId } = req.params;
-
-  const productExists = await Product.findOne({ category: categoryId });
-
-  if (productExists) {
-    throw new AppError(
-      "Cannot delete category: It has associated products",
-      400,
-    );
-  }
-
-  const deletedCategory = await Category.findByIdAndDelete(categoryId);
-
-  if (!deletedCategory) {
-    throw new AppError("Category not found", 404);
-  }
+  await categoryService.deleteCategory(req.params.categoryId);
 
   res.status(200).json({
     success: true,
-    message: "Category has been deleted successfully",
+    message: "Category deleted successfully",
   });
 });
 

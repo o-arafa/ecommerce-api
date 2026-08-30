@@ -19,13 +19,15 @@ const errorHandler = (err, req, res, next) => {
     error = new AppError(`${field} already exists`, 409);
   }
 
-  if (err.name === 'ZodError') {
-  const messages = err.issues.map((e) => `${e.path.join('.')}: ${e.message}`);
-  return res.status(400).json({
-    status: 'fail',
-    errors: messages,
-  });
-}
+  if (error.name === "ZodError") {
+    const messages = error.issues.map(
+      (e) => `${e.path.join(".")}: ${e.message}`,
+    );
+    return res.status(400).json({
+      status: "fail",
+      errors: messages,
+    });
+  }
 
   const statusCode = error.statusCode || 500;
   const status = error.status || "error";
