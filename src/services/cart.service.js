@@ -1,51 +1,47 @@
 const Cart = require("../models/Cart");
 const Product = require("../models/Product");
 const AppError = require("../utils/AppError");
-const asyncHandler = require("../middlewares/asyncHandler");
 
-const getMyCart = asyncHandler(async (req, res) => {
-  let cart = await Cart.findOne({ user: req.user._id }).populate(
+const getMyCart = async (userId) => {
+  let cart = await Cart.findOne({ user: userId }).populate(
     "items.product",
-    "title description"
+    "title description",
   );
 
   if (!cart) {
     cart = await Cart.create({
-      user: req.user._id,
+      user: userId,
       items: [],
       totalPrice: 0,
     });
   }
 
-  res.status(200).json({
-    success: true,
-    data: cart,
-  });
-});
+  return cart;
+};
 
-const addToCart = asyncHandler(async (req, res) => {
-  const { productId, quantity } = req.body;
-
+const addToCart = async (userId, { productId, quantity }) => {
   const product = await Product.findById(productId);
+
   if (!product) {
     throw new AppError("Product not found", 404);
   }
 
-  let cart = await Cart.findOne({ user: req.user._id });
+  let cart = await Cart.findOne({ user: userId });
 
   if (!cart) {
     cart = await Cart.create({
-      user: req.user._id,
+      user: userId,
       items: [],
       totalPrice: 0,
     });
   }
 
   const existingItem = cart.items.find(
-    (item) => item.product.toString() === productId
+    (item) => item.product.toString() === productId,
   );
 
   const currentInCart = existingItem ? existingItem.quantity : 0;
+
   const totalRequested = currentInCart + quantity;
 
   const available = product.inventory.quantity - product.inventory.reserved;
@@ -53,11 +49,12 @@ const addToCart = asyncHandler(async (req, res) => {
   if (totalRequested > available) {
     throw new AppError(
       `Only ${available} items available. You have ${currentInCart} in cart.`,
-      400
+      400,
     );
   }
 
   product.inventory.reserved += quantity;
+
   await product.save();
 
   if (existingItem) {
@@ -72,23 +69,18 @@ const addToCart = asyncHandler(async (req, res) => {
 
   await cart.save();
 
-  res.status(200).json({
-    success: true,
-    data: cart,
-  });
-});
+  return cart;
+};
 
-const updateCartItem = asyncHandler(async (req, res, next) => {
-  const { productId } = req.params;
-  const { quantity } = req.body;
+const updateCartItem = async (userId, productId, quantity) => {
+  const cart = await Cart.findOne({ user: userId });
 
-  const cart = await Cart.findOne({ user: req.user._id });
   if (!cart) {
     throw new AppError("Cart not found", 404);
   }
 
   const itemIndex = cart.items.findIndex(
-    (item) => item.product.toString() === productId
+    (item) => item.product.toString() === productId,
   );
 
   if (itemIndex === -1) {
@@ -96,12 +88,14 @@ const updateCartItem = asyncHandler(async (req, res, next) => {
   }
 
   const product = await Product.findById(productId);
+
   if (!product) {
     throw new AppError("Product not found", 404);
   }
 
   const oldQuantity = cart.items[itemIndex].quantity;
-  const quantityDiff = quantity - oldQuantity;  // +2 أو -1
+
+  const quantityDiff = quantity - oldQuantity;
 
   const available = product.inventory.quantity - product.inventory.reserved;
 
@@ -110,32 +104,30 @@ const updateCartItem = asyncHandler(async (req, res, next) => {
   }
 
   product.inventory.reserved += quantityDiff;
+
   await product.save();
 
   cart.items[itemIndex].quantity = quantity;
+
   await cart.save();
 
   const updatedCart = await Cart.findById(cart._id).populate(
     "items.product",
-    "title description"
+    "title description",
   );
 
-  res.status(200).json({
-    success: true,
-    data: updatedCart,
-  });
-});
+  return updatedCart;
+};
 
-const removeFromCart = asyncHandler(async (req, res, next) => {
-  const { productId } = req.params;
+const removeFromCart = async (userId, productId) => {
+  const cart = await Cart.findOne({ user: userId });
 
-  const cart = await Cart.findOne({ user: req.user._id });
   if (!cart) {
     throw new AppError("Cart not found", 404);
   }
 
   const removedItem = cart.items.find(
-    (item) => item.product.toString() === productId
+    (item) => item.product.toString() === productId,
   );
 
   if (!removedItem) {
@@ -143,49 +135,51 @@ const removeFromCart = asyncHandler(async (req, res, next) => {
   }
 
   const product = await Product.findById(productId);
+
+  if (!product) {
+    throw new AppError("Product not found", 404);
+  }
+
   product.inventory.reserved -= removedItem.quantity;
+
   await product.save();
 
   cart.items = cart.items.filter(
-    (item) => item.product.toString() !== productId
+    (item) => item.product.toString() !== productId,
   );
 
-  await cart.save();  
+  await cart.save();
+
   const updatedCart = await Cart.findById(cart._id).populate(
-  "items.product",
-  "title description",
+    "items.product",
+    "title description",
   );
 
-  res.status(200).json({
-    status: "success",
-    message: "Item removed from cart",
-    data: { cart: updatedCart },
-  });
-});
+  return updatedCart;
+};
 
-const clearCart = asyncHandler(async (req, res, next) => {
-  const cart = await Cart.findOne({ user: req.user._id });
-    if (!cart) {
-      throw new AppError("Cart not found", 404);
-    }
-  
-    for (const item of cart.items) {
-      const product = await Product.findById(item.product);
-      if (product) {
-        product.inventory.reserved -= item.quantity;
-        await product.save();
-      }
-    }
-  
-    cart.items = [];
-    await cart.save();
+const clearCart = async (userId) => {
+  const cart = await Cart.findOne({ user: userId });
 
-  res.status(200).json({
-    status: "success",
-    message: "Cart cleared",
-    data: { cart },
-  });
-});
+  if (!cart) {
+    throw new AppError("Cart not found", 404);
+  }
+
+  for (const item of cart.items) {
+    const product = await Product.findById(item.product);
+
+    if (product) {
+      product.inventory.reserved -= item.quantity;
+      await product.save();
+    }
+  }
+
+  cart.items = [];
+
+  await cart.save();
+
+  return cart;
+};
 
 module.exports = {
   getMyCart,
