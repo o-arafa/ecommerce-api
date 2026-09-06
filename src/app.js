@@ -2,9 +2,9 @@ const express = require("express");
 const productRoutes = require("./routes/product.routes");
 const categoryRoutes = require("./routes/category.routes");
 const authRoutes = require("./routes/auth.routes");
-const cartRoutes = require("./routes/cartRoutes");
-const orderRoutes = require("./routes/orderRoutes");
-const paymentRoutes = require("./routes/paymentRoutes");
+const cartRoutes = require("./routes/cart.routes");
+const orderRoutes = require("./routes/order.routes");
+const paymentRoutes = require("./routes/payment.routes");
 
 const errorHandler = require("./middlewares/errorHandler");
 const AppError = require("./utils/AppError");
@@ -13,7 +13,7 @@ const app = express();
 app.post(
   "/api/payments/webhook",
   express.raw({ type: "application/json" }),
-  require("./controllers/paymentController").stripeWebhook,
+  require("./controllers/payment.controller").stripeWebhook,
 );
 
 app.use(express.json());
