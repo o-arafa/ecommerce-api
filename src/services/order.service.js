@@ -61,6 +61,10 @@ const createOrder = async (
     }
 
     for (const item of cart.items) {
+      if (!item.product) {
+        throw new AppError("Product not found", 404);
+      }
+
       const product = await Product.findById(item.product._id).session(session);
 
       if (!product) {
@@ -159,7 +163,6 @@ const cancelOrder = async (orderId, userId) => {
         update: {
           $inc: {
             "inventory.quantity": Number(item.quantity),
-            "inventory.reserved": -Number(item.quantity),
           },
         },
       },

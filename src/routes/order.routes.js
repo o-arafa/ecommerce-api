@@ -17,7 +17,7 @@ router.post(
   validate(createOrderSchema),
   orderController.createOrder,
 );
-router.put("/:id/cancel", protect, orderController.cancelOrder);
+router.put("/:orderId/cancel", protect, orderController.cancelOrder);
 router.put(
   "/:orderId/status",
   protect,
