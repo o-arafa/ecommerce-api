@@ -1,4 +1,8 @@
 const express = require("express");
+const helmet = require("helmet");
+const cors = require("cors");
+const { globalLimiter } = require("./middlewares/rateLimiter");
+
 const productRoutes = require("./routes/product.routes");
 const categoryRoutes = require("./routes/category.routes");
 const authRoutes = require("./routes/auth.routes");
@@ -8,7 +12,18 @@ const paymentRoutes = require("./routes/payment.routes");
 
 const errorHandler = require("./middlewares/errorHandler");
 const AppError = require("./utils/AppError");
+
 const app = express();
+app.use(helmet());
+app.use(
+  cors({
+    origin: "http://localhost:5000",
+  }),
+);
+
+if (process.env.NODE_ENV !== "test") {
+  app.use("/api", globalLimiter);
+}
 
 app.post(
   "/api/payments/webhook",
@@ -18,7 +33,10 @@ app.post(
 
 app.use(express.json());
 app.get("/", (req, res) => {
-  res.json("API is working");
+  res.json({
+    status: "success",
+    message: "API is working",
+  });
 });
 
 app.use("/api/products", productRoutes);
