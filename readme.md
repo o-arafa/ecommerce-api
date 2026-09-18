@@ -86,6 +86,9 @@ The API follows a layered architecture, separating responsibilities across route
 - **Zod** — Request validation
 - **JWT** — Authentication
 - **bcrypt** — Password hashing
+- **Helmet** — HTTP security headers
+- **CORS** — Cross-origin resource sharing configuration
+- **express-rate-limit** — API rate limiting and brute-force protection
 - **Stripe** — Payment processing
 - **Slugify** — Product/category slug generation
 - **Jest** — Testing framework
@@ -113,6 +116,7 @@ ecommerce-api/
 │   │   ├── asyncHandler.js
 │   │   ├── auth.js
 │   │   ├── errorHandler.js
+│   │   ├── rateLimiter.js
 │   │   └── validate.js
 │   │
 │   ├── models/
@@ -250,6 +254,7 @@ Create a `.env` file.
 
 ```env
 PORT=5000
+CLIENT_URL=http://localhost:5173
 MONGO_URI=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret
 JWT_EXPIRE=7d
