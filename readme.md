@@ -21,14 +21,15 @@ The API follows a layered architecture, separating responsibilities across route
 
 ### Product Management
 
-- Create, update, and delete products
-- Category management
+- Create,retrieve, update, and delete products
+- Category association
 - Product slugs
 - Product search
 - Filtering and sorting
 - Pagination
 
 ### Category Management
+
 - Create categories
 - Update categories
 - Delete categories
@@ -36,7 +37,8 @@ The API follows a layered architecture, separating responsibilities across route
 - Retrieve individual categories
 
 ### Shopping Cart
-- Get current user's cart
+
+- Retrieve the user's cart
 - Add products to cart
 - Update product quantities
 - Remove products from cart
@@ -45,11 +47,15 @@ The API follows a layered architecture, separating responsibilities across route
 
 ### Order Management
 
-- Create and Retrieve orders
-- Cancel order
-- Order status management (admin)
+- Create orders from the authenticated user's cart
+- Retrieve individual orders
+- Retrieve all orders for administrators
+- Retrieve the current user's orders
+- Cancel pending orders
+- Order status management
 - Unique order number generation
 - MongoDB transactions
+- Transaction rollback when order creation and order cancle fails
 
 ### Inventory Management
 
@@ -82,6 +88,9 @@ The API follows a layered architecture, separating responsibilities across route
 - **bcrypt** — Password hashing
 - **Stripe** — Payment processing
 - **Slugify** — Product/category slug generation
+- **Jest** — Testing framework
+- **Supertest** — HTTP integration testing
+- **MongoDB Memory Server** — Isolated MongoDB test environment
 
 ## Project Structure
 
@@ -142,6 +151,14 @@ ecommerce-api/
 │   │
 │   └── app.js
 │
+├── test/
+│   ├── setup.js
+│   ├── helpers.js
+│   ├── auth.test.js
+│   ├── products.test.js
+│   ├── cart.test.js
+│   └── orders.test.js
+│
 ├── server.js
 ├── .env
 ├── .gitignore
@@ -152,18 +169,20 @@ ecommerce-api/
 
 ## Directory Responsibilities
 
-| Directory       | Responsibility                                                      |
-| --------------- | ------------------------------------------------------------------- |
-| `config/`       | Database and third-party service configuration                      |
-| `controllers/`  | Handle HTTP requests and responses                                  |
-| `middlewares/`  | Authentication, authorization, validation, async handling, errors   |
-| `models/`       | Mongoose schemas and database models                                |
-| `routes/`       | API endpoint definitions                                            |
-| `services/`     | Business logic and application operations                           |
-| `utils/`        | Shared utilities and custom application errors                      |
-| `validators/`   | Zod validation schemas                                              |
+| Directory      | Responsibility                                                    |
+| -------------- | ----------------------------------------------------------------- |
+| `config/`      | Database and third-party service configuration                    |
+| `controllers/` | Handle HTTP requests and responses                                |
+| `middlewares/` | Authentication, authorization, validation, async handling, errors |
+| `models/`      | Mongoose schemas and database models                              |
+| `routes/`      | API endpoint definitions                                          |
+| `services/`    | Business logic and application operations                         |
+| `utils/`       | Shared utilities and custom application errors                    |
+| `validators/`  | Zod validation schemas                                            |
+| `tests/`       | Integration tests, test setup, and reusable test helpers          |
 
 ## Architecture
+
 The project follows a layered backend architecture:
 
 ```text
@@ -193,7 +212,6 @@ MongoDB
 
 ```
 
-
 ## Getting Started
 
 ### Prerequisites
@@ -209,18 +227,22 @@ Make sure you have the following installed:
 ### 1. Clone the repository:
 
 **Clone the repository from GitHub**
-   ```bash
-   git clone https://github.com/o-arafa/ecommerce-api.git
-   ```
-**Navigate to the project directory**
- ```bash
-   cd ecommerce-api
-   ```
-**Install the required dependencies**
- ```bash
-   npm install
-   ```
 
+```bash
+git clone https://github.com/o-arafa/ecommerce-api.git
+```
+
+**Navigate to the project directory**
+
+```bash
+  cd ecommerce-api
+```
+
+**Install the required dependencies**
+
+```bash
+  npm install
+```
 
 ### 2. Configure environment variables
 
@@ -248,7 +270,64 @@ The API will be available at:
 http://localhost:5000
 ```
 
+## Testing
+
+The project includes integration tests using Jest and Supertest.
+
+The tests use MongoDB Memory Server to create an isolated MongoDB replica set for testing. Test data is cleaned after every test, allowing tests to run independently.
+
+### Integration Test Coverage
+
+The integration test suite covers the following areas:
+
+Authentication
+
+- User registration (success, duplicate email, Zod validation, password mismatch)
+- User login (success, incorrect password, non-existing email)
+
+Products
+
+- Retrieve products with pagination and search
+- Retrieve a single product by id or by slug
+- Create, update, and delete products
+- Admin-only authorization and validation errors
+
+Shopping Cart
+
+- Retrieve the current user's cart
+- Add products to the cart with stock reservation
+- Reject adding more than the available stock
+- Update product quantities with total recalculation
+- Remove items from the cart and release reservations
+- Clear the cart and release all reservations
+
+Orders
+
+- Create orders from the cart (decreases stock and deletes the cart)
+- Reject incomplete shipping information and empty carts
+- Inventory validation during order creation
+- Transaction rollback when order creation fails
+- Retrieve a single order (owner or admin only)
+- Retrieve all orders for admins and the current user's orders
+- Order status transitions with allowed flow validation
+- Cancel pending orders with stock restoration
+
+### Test Setup
+
+The test/setup directory contains the configuration required to prepare and initialize the test environment.
+
+The test/helpers directory contains reusable utilities used by multiple integration tests, such as creating test data and handling authentication.
+
+### Running Tests
+
+Run the test suite using:
+
+```text
+npm test
+```
+
 ## API Endpoint Summary
+
 ```text
 Authentication
 POST   /api/auth/register
